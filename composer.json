@@ -17,7 +17,7 @@
         "source": "https://github.com/bariew/laravel-translator-cli"
     },
     "autoload": {
-        "psr-0": {
+        "psr-4": {
             "Bariew\\Translator\\": "src"
         }
     },
