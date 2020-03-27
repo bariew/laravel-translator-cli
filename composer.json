@@ -1,0 +1,29 @@
+{
+    "name": "bariew/laravel-translator-cli",
+    "description": "Laravel command that interactively helps you import missing keys.",
+    "version": "1.0.0",
+    "type": "library",
+    "keywords": ["laravel", "localization", "translation", "translator", "cli", "command"],
+    "homepage": "https://github.com/bariew/laravel-translator-cli",
+    "license": "MIT",
+    "authors": [{
+        "name": "Bariev Pavel",
+        "email": "bariew@yandex.ru",
+        "homepage": "https://github.com/bariew",
+        "role": "Developer"
+    }],
+    "support": {
+        "issues": "https://github.com/bariew/laravel-translator-cli/issues",
+        "source": "https://github.com/bariew/laravel-translator-cli"
+    },
+    "require": {
+        "php": ">=5.4.0",
+        "illuminate/support": "4.2.*"
+    },
+    "autoload": {
+        "psr-0": {
+            "Bariew\\Translator\\": "src/"
+        }
+    },
+    "minimum-stability": "stable"
+}
