@@ -18,7 +18,7 @@
     },
     "autoload": {
         "psr-0": {
-            "Bariew\\Translator\\": "src/"
+            "Bariew\\Translator\\": "src"
         }
     },
     "minimum-stability": "stable"
