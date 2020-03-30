@@ -13,7 +13,7 @@ use Symfony\Component\Finder\Finder;
  *
  * @author bariew <bariew@yandex.ru>
  */
-class TranslatorGenerateCommand extends Command {
+class GenerateCommand extends Command {
 
 	/**
 	 * The console command name.
@@ -30,39 +30,19 @@ class TranslatorGenerateCommand extends Command {
 	protected $description = 'Start the interactive translator.';
 
     /**
-     * The Laravel file provider.
-     * @var Illuminate\Support\Facades\File
+     * @var TranslatorService
      */
-    protected $file;
-
-    /**
-     * The Laravel config provider.
-     * @var Illuminate\Support\Facades\Config
-     */
-    protected $config;
-
-    /**
-     * The translator service.
-     * @var Bariew\Translator\Services\TranslatorService
-     */
-    protected $translator;
-
-    /**
-     * Missing translations.
-     * @var array
-     */
-    protected $missing;
+    protected $service;
 
 	/**
 	 * Create a new command instance.
 	 *
 	 * @return void
 	 */
-	public function __construct(File $file, Config $config)
+	public function __construct(\Illuminate\Foundation\Application $app)
 	{
 		parent::__construct();
-        $this->file = $file;
-        $this->config = $config;
+        $this->service = new TranslatorService($app);
 	}
 
 	/**
@@ -70,18 +50,9 @@ class TranslatorGenerateCommand extends Command {
 	 *
 	 * @return mixed
 	 */
-	public function fire()
+	public function handle()
 	{
-        $files = $this->file->notPath(['/vendor', '.git', 'node_modules'])->files();
-
-        foreach ($this->translator->getMissing() as $locale => $bundles) {
-            foreach ($bundles as $bundle => $keys) {
-                $path = app_path()."/lang/$locale/$bundle.php";
-                $contents = "<?php\n\nreturn ".var_export($keys, true).";\n";
-                $this->file->put($path, $contents);
-                $this->info(" > File saved: $path");
-            }
-        }
+        $this->service->import();
 	}
 
 	/**

@@ -1,52 +1,42 @@
-<?php namespace Bariew\Translator;
+<?php
 
+namespace Bariew\Translator;
+
+use Bariew\Translator\Commands\GenerateCommand;
+use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 
-/**
- * The TranslatorServiceProvider class.
- *
- * @author bariew <bariew@yandex.ru>
- */
-class TranslatorServiceProvider extends ServiceProvider {
+class TranslatorServiceProvider extends ServiceProvider
+{
+    /**
+     * Indicates if loading of the provider is deferred.
+     *
+     * @var bool
+     */
+    protected $defer = false;
 
-	/**
-	 * Indicates if loading of the provider is deferred.
-	 *
-	 * @var bool
-	 */
-	protected $defer = true;
+    /**
+     * Register the service provider.
+     *
+     * @return void
+     */
+    public function register()
+    {
+        $this->publishes([dirname(__DIR__) . '/config/translator.php' => config_path('translator.php')], 'config');
+    }
 
-	/**
-	 * Bootstrap the application events.
-	 *
-	 * @return void
-	 */
-	public function boot()
-	{
-		$this->package('bariew/laravel-translator-cli');
-	}
+    /**
+     * Bootstrap the application events.
+     *
+     * @return void
+     */
+    public function boot()
+    {
 
-	/**
-	 * Register the service provider.
-	 *
-	 * @return void
-	 */
-	public function register()
-	{
-		$this->app['translator.command.generate'] = $this->app->share(function ($app) {
-            return new Commands\TranslatorGenerateCommand($app['files'], $app['config']);
-        });
-        $this->commands('translator.command.generate');
-	}
-
-	/**
-	 * Get the services provided by the provider.
-	 *
-	 * @return array
-	 */
-	public function provides()
-	{
-		return array('translator.command.generate');
-	}
-
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                GenerateCommand::class,
+            ]);
+        }
+    }
 }

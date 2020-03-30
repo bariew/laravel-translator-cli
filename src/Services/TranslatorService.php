@@ -1,223 +1,68 @@
 <?php namespace Bariew\Translator\Services;
 
+use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\Finder\Finder;
+
 /**
  * The TranslatorService class.
  *
  * @author bariew <bariew@yandex.ru>
  */
-class TranslatorService {
+class TranslatorService
+{
+    /**
+     * @var Application
+     */
+    public $app;
+    public $config = [];
+
 
     /**
-     * The translations.
-     *
-     * @var array
+     * TranslatorService constructor.
+     * @param Application $app
      */
-    protected $translations;
-
-    /**
-     * All available locales.
-     *
-     * @var array
-     */
-    protected $locales;
-
-    /**
-     * The default locale.
-     *
-     * @var string
-     */
-    protected $defaultLocale;
-
-    /**
-     * Missing translations.
-     *
-     * @var array
-     */
-    protected $missing;
-
-    /**
-     * Construct a new TranslatorService.
-     *
-     * @param array $files Array of language files.
-     */
-    public function __construct($files)
+    public function __construct(Application $app)
     {
-        $this->setFiles($files);
+        $this->app = $app;
+        $this->config = $app['config']['translator'];
     }
 
-    /**
-     * Return translations.
-     *
-     * @return array Translations.
-     */
-    public function getTranslations()
+    public function import()
     {
-        return $this->translations;
-    }
+        $base = $this->app['path.lang'];
+        $vendor = false;
+        $files = Finder::create()->in(array_map(function ($v) {
+            return base_path() . $v;
+        }, $this->config['include']))->ignoreDotFiles(true)->notPath($this->config['exclude'])->files();
+        $keys = [];
 
-    /**
-     * Return all available locales.
-     *
-     * @return array Available locales.
-     */
-    public function getLocales()
-    {
-        return $this->locales;
-    }
-
-    /**
-     * Return the default locale.
-     *
-     * @return string The default locale.
-     */
-    public function getDefaultLocale()
-    {
-        return $this->defaultLocale;
-    }
-
-    /**
-     * Set the default locale.
-     *
-     * @param string $locale A locale.
-     */
-    public function setDefaultLocale($locale)
-    {
-        $this->defaultLocale = $locale;
-    }
-
-    /**
-     * Return missing translations.
-     *
-     * @return array Missing translations.
-     */
-    public function getMissing()
-    {
-        return $this->missing;
-    }
-
-    /**
-     * Set languages files.
-     *
-     * @param array $files Languages files.
-     */
-    public function setFiles($files)
-    {
-        $this->parse($files);
-        $this->locales = array_keys($this->translations);
-        $this->check();
-    }
-
-    /**
-     * Parse languages files.
-     *
-     * @param  array $files Language files.
-     *
-     * @return void
-     */
-    protected function parse($files)
-    {
-        foreach ($files as $file)
-        {
-            // Filter PHP files.
-            $pathName = $file->getRelativePathName();
-
-            if ( pathinfo($pathName)['extension'] !== 'php' )
-            {
+        foreach ($files as $file) {
+            if (!preg_match_all('/(\?=\s*__|echo\s*__|{{\s*__|{{\s*\@lang)\([\'\"]([^\'\"]+)[\'\"]\)/', file_get_contents($file), $matches)) {
                 continue;
             }
-
-            $locale = $file->getRelativePath();
-            $bundle = basename($pathName, '.php');
-            $keys = include $file->getPathname();
-
-            $this->translations[$locale][$bundle] = $keys;
-        }
-    }
-
-    /**
-     * Check for missing translations.
-     *
-     * @return void
-     */
-    protected function check()
-    {
-        $this->missing = array();
-
-        // Iterate all translation keys.
-        foreach ($this->translations as $bundles_a)
-        {
-            foreach ($bundles_a as $bundle_a => $keys_a)
-            {
-                $keys_a = array_keys($keys_a);
-
-                // Compare each key against all translations.
-                foreach ($keys_a as $key_a)
-                {
-                    foreach ($this->translations as $locale_b => $bundles_b)
-                    {
-
-                        // Check missing keys.
-                        if (!isset($bundles_b[$bundle_a][$key_a]))
-                        {
-                            $this->missing[$locale_b][$bundle_a][] = $key_a;
-                        }
-                    }
+            foreach ($matches[2] as $match) {
+                $data = array_reverse(explode('.', $match));
+                $res = '';
+                foreach ($data as $k => $v) {
+                    $res = [$data[$k] => $res];
                 }
+                $keys = array_merge_recursive($keys, $res);
             }
         }
 
-        // Remove duplicated keys.
-        foreach ($this->missing as $locale => $bundles)
-        {
-            foreach ($bundles as $bundle => $entries)
-            {
-                $this->missing[$locale][$bundle] = array_unique($this->missing[$locale][$bundle]);
+        foreach (Finder::create()->in($this->app['path.lang'])->directories() as $directory) {
+            foreach ($keys as $name => $data) {
+                $path = $directory . DIRECTORY_SEPARATOR . $name . '.php';
+                if (file_exists($path)) {
+                    $oldData = require $path;
+                    $data = array_merge_recursive($data, $oldData);
+                }
+                file_put_contents($path, '<?php return ' . var_export($data, true) . ';');
             }
         }
+
+        return true;
     }
-
-    /**
-     * Return a translation message.
-     *
-     * @param  string $locale The locale.
-     * @param  string $bundle The bundle.
-     * @param  string $key    The key.
-     *
-     * @return string         A translation message.
-     */
-    public function get($locale, $bundle, $key)
-    {
-        if (!isset($this->translations[$locale]))
-        {
-            return null;
-        }
-
-        if (!isset($this->translations[$locale][$bundle]))
-        {
-            return null;
-        }
-
-        if (!isset($this->translations[$locale][$bundle][$key]))
-        {
-            return null;
-        }
-
-        return $this->translations[$locale][$bundle][$key];
-    }
-
-    /**
-     * Put a translation.
-     *
-     * @param  string $locale The locale.
-     * @param  string $bundle The bundle.
-     * @param  string $key    The key.
-     * @param  string $value  The translation value.
-     *
-     * @return void
-     */
-    public function put($locale, $bundle, $key, $value)
-    {
-        $this->translations[$locale][$bundle][$key] = $value;
-    }
-
 }
