@@ -57,7 +57,7 @@ class TranslatorService
                 $path = $directory . DIRECTORY_SEPARATOR . $name . '.php';
                 if (file_exists($path)) {
                     $oldData = require $path;
-                    $data = array_merge_recursive($data, $oldData);
+                    $data = array_merge_recursive_distinct($data, $oldData);
                 }
                 file_put_contents($path, '<?php return ' . var_export($data, true) . ';');
             }
